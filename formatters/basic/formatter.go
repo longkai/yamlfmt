@@ -60,6 +60,9 @@ func (f *BasicFormatter) Format(yamlContent []byte) ([]byte, error) {
 	var b bytes.Buffer
 	e := yaml.NewEncoder(&b)
 	e.SetIndent(f.Config.Indent)
+	if f.Config.CompactSequenceIndent {
+		e.CompactSeqIndent()
+	}
 	for _, doc := range documents {
 		err := e.Encode(&doc)
 		if err != nil {

@@ -4,9 +4,10 @@ The basic formatter is a barebones formatter that simply takes the data provided
 
 ## Configuration
 
-| Key                      | Type           | Default | Description |
-|:-------------------------|:---------------|:--------|:------------|
-| `indent`                 | int            | 2       | The indentation level in spaces to use for the formatted yaml|
-| `include_document_start` | bool           | false   | Include `---` at document start |
-| `line_ending`            | `lf` or `crlf` | `crlf` on Windows, `lf` otherwise | Parse and write the file with "lf" or "crlf" line endings |
-| `emoji_support`          | bool           | false   | Support encoding utf-8 emojis |
+| Key                       | Type           | Default | Description |
+|:------------------------- |:---------------|:--------|:------------|
+| `indent`                  | int            | 2       | The indentation level in spaces to use for the formatted yaml|
+| `include_document_start`  | bool           | false   | Include `---` at document start |
+| `line_ending`             | `lf` or `crlf` | `crlf` on Windows, `lf` otherwise | Parse and write the file with "lf" or "crlf" line endings |
+| `emoji_support`           | bool           | false   | Support encoding utf-8 emojis |
+| `compact_sequence_indent` | bool           | false   | Use compact sequence indent, i.e. no indent |

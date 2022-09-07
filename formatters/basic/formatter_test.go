@@ -113,3 +113,22 @@ func TestEmojiSupport(t *testing.T) {
 		t.Fatalf("expected string to contain 😊, got: %s", resultStr)
 	}
 }
+
+func TestCompactSeqIndent(t *testing.T) {
+	f := &basic.BasicFormatter{Config: basic.DefaultConfig()}
+	f.Config.CompactSequenceIndent = true
+
+	yaml := `a:
+  - 1
+b:  1`
+	result, err := f.Format([]byte(yaml))
+	if err != nil {
+		t.Fatalf("expected formatting to pass, returned error: %v", err)
+	}
+	expect := `a:
+- 1
+b: 1`
+	if got := string(result); !strings.Contains(got, expect) {
+		t.Fatalf("expected string to contain %s, got %s", expect, got)
+	}
+}
