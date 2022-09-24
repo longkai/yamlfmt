@@ -22,8 +22,15 @@ import (
 	"github.com/google/yamlfmt/formatters/basic"
 )
 
+func newFormatter(config *basic.Config) *basic.BasicFormatter {
+	return &basic.BasicFormatter{
+		Config:   config,
+		Features: basic.ConfigureFeaturesFromConfig(config),
+	}
+}
+
 func TestFormatterRetainsComments(t *testing.T) {
-	f := &basic.BasicFormatter{Config: basic.DefaultConfig()}
+	f := newFormatter(basic.DefaultConfig())
 
 	yaml := `x: "y" # foo comment`
 
@@ -72,8 +79,9 @@ a:
 }
 
 func TestWithDocumentStart(t *testing.T) {
-	f := &basic.BasicFormatter{Config: basic.DefaultConfig()}
-	f.Config.IncludeDocumentStart = true
+	config := basic.DefaultConfig()
+	config.IncludeDocumentStart = true
+	f := newFormatter(config)
 
 	yaml := "a:"
 	s, err := f.Format([]byte(yaml))
@@ -86,8 +94,9 @@ func TestWithDocumentStart(t *testing.T) {
 }
 
 func TestCRLFLineEnding(t *testing.T) {
-	f := &basic.BasicFormatter{Config: basic.DefaultConfig()}
-	f.Config.LineEnding = yamlfmt.LineBreakStyleCRLF
+	config := basic.DefaultConfig()
+	config.LineEnding = yamlfmt.LineBreakStyleCRLF
+	f := newFormatter(config)
 
 	yaml := "# comment\r\na:\r\n"
 	result, err := f.Format([]byte(yaml))
@@ -100,8 +109,9 @@ func TestCRLFLineEnding(t *testing.T) {
 }
 
 func TestEmojiSupport(t *testing.T) {
-	f := &basic.BasicFormatter{Config: basic.DefaultConfig()}
-	f.Config.EmojiSupport = true
+	config := basic.DefaultConfig()
+	config.EmojiSupport = true
+	f := newFormatter(config)
 
 	yaml := "a: 😊"
 	result, err := f.Format([]byte(yaml))
@@ -130,5 +140,93 @@ b:  1`
 b: 1`
 	if got := string(result); !strings.Contains(got, expect) {
 		t.Fatalf("expected string to contain %s, got %s", expect, got)
+	}
+}
+
+func TestRetainLineBreaks(t *testing.T) {
+	testCases := []struct {
+		desc   string
+		input  string
+		expect string
+	}{
+		{
+			desc: "basic",
+			input: `a:  1
+
+b: 2`,
+			expect: `a: 1
+
+b: 2
+`,
+		},
+		{
+			desc: "multi-doc",
+			input: `a:  1
+
+# tail comment
+---
+b: 2`,
+			expect: `a: 1
+
+# tail comment
+---
+b: 2
+`,
+		},
+		{
+			desc: "literal string",
+			input: `a:  1
+
+shell: |
+  #!/usr/bin/env bash
+
+  # hello, world
+    # bye
+  echo "hello, world"
+`,
+			expect: `a: 1
+
+shell: |
+  #!/usr/bin/env bash
+
+  # hello, world
+    # bye
+  echo "hello, world"
+`,
+		},
+		{
+			desc: "multi level nested literal string",
+			input: `a:  1
+x:
+  y:
+    shell: |
+      #!/usr/bin/env bash
+
+        # bye
+      echo "hello, world"`,
+			expect: `a: 1
+x:
+  y:
+    shell: |
+      #!/usr/bin/env bash
+
+        # bye
+      echo "hello, world"
+`,
+		},
+	}
+	config := basic.DefaultConfig()
+	config.RetainLineBreaks = true
+	f := newFormatter(config)
+	for _, c := range testCases {
+		t.Run(c.desc, func(t *testing.T) {
+			got, err := f.Format([]byte(c.input))
+			if err != nil {
+				t.Fatalf("expected formatting to pass, returned error: %v", err)
+			}
+			if string(got) != c.expect {
+				t.Fatalf("didn't retain line breaks\nresult: %v\nexpect %s", string(got), c.expect)
+			}
+		})
 	}
 }

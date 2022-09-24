@@ -25,15 +25,20 @@ func (f *BasicFormatterFactory) Type() string {
 	return BasicFormatterType
 }
 
-func (f *BasicFormatterFactory) NewDefault() yamlfmt.Formatter {
-	return &BasicFormatter{Config: DefaultConfig()}
+func (f *BasicFormatterFactory) NewFormatter(configData map[string]interface{}) (yamlfmt.Formatter, error) {
+	config := DefaultConfig()
+	if configData != nil {
+		err := mapstructure.Decode(configData, &config)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return newFormatter(config), nil
 }
 
-func (f *BasicFormatterFactory) NewWithConfig(configData map[string]interface{}) (yamlfmt.Formatter, error) {
-	config := DefaultConfig()
-	err := mapstructure.Decode(configData, &config)
-	if err != nil {
-		return nil, err
+func newFormatter(config *Config) yamlfmt.Formatter {
+	return &BasicFormatter{
+		Config:   config,
+		Features: ConfigureFeaturesFromConfig(config),
 	}
-	return &BasicFormatter{Config: config}, nil
 }

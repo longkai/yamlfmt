@@ -20,29 +20,31 @@ import (
 	"io"
 
 	"github.com/google/yamlfmt"
-	"github.com/google/yamlfmt/internal/hotfix"
 	"gopkg.in/yaml.v3"
 )
 
 const BasicFormatterType string = "basic"
 
 type BasicFormatter struct {
-	Config *Config
+	Config   *Config
+	Features yamlfmt.FeatureList
 }
+
+// yamlfmt.Formatter interface
 
 func (f *BasicFormatter) Type() string {
 	return BasicFormatterType
 }
 
-func (f *BasicFormatter) Format(yamlContent []byte) ([]byte, error) {
-	var reader *bytes.Reader
-	if f.Config.LineEnding == yamlfmt.LineBreakStyleCRLF {
-		crStrippedContent := hotfix.StripCRBytes(yamlContent)
-		reader = bytes.NewReader(crStrippedContent)
-	} else {
-		reader = bytes.NewReader(yamlContent)
+func (f *BasicFormatter) Format(input []byte) ([]byte, error) {
+	// Run all featurres with BeforeActions
+	yamlContent, err := f.Features.ApplyFeatures(input, yamlfmt.FeatureApplyBefore)
+	if err != nil {
+		return nil, err
 	}
 
+	// Format the yaml content
+	reader := bytes.NewReader(yamlContent)
 	decoder := yaml.NewDecoder(reader)
 	documents := []yaml.Node{}
 	for {
@@ -70,20 +72,11 @@ func (f *BasicFormatter) Format(yamlContent []byte) ([]byte, error) {
 		}
 	}
 
-	encodedContent := b.Bytes()
-	if f.Config.IncludeDocumentStart {
-		encodedContent = withDocumentStart(b.Bytes())
+	// Run all features with AfterActions
+	resultYaml, err := f.Features.ApplyFeatures(b.Bytes(), yamlfmt.FeatureApplyAfter)
+	if err != nil {
+		return nil, err
 	}
-	if f.Config.EmojiSupport {
-		encodedContent = hotfix.ParseUnicodePoints(encodedContent)
-	}
-	if f.Config.LineEnding == yamlfmt.LineBreakStyleCRLF {
-		encodedContent = hotfix.WriteCRLFBytes(encodedContent)
-	}
-	return encodedContent, nil
-}
 
-func withDocumentStart(document []byte) []byte {
-	documentStart := "---\n"
-	return append([]byte(documentStart), document...)
+	return resultYaml, nil
 }

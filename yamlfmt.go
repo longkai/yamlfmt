@@ -14,7 +14,9 @@
 
 package yamlfmt
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type Formatter interface {
 	Type() string
@@ -23,8 +25,7 @@ type Formatter interface {
 
 type Factory interface {
 	Type() string
-	NewDefault() Formatter
-	NewWithConfig(config map[string]interface{}) (Formatter, error)
+	NewFormatter(config map[string]interface{}) (Formatter, error)
 }
 
 type Registry struct {
@@ -61,7 +62,89 @@ func (r *Registry) GetDefaultFactory() (Factory, error) {
 	return factory, nil
 }
 
+type LineBreakStyle string
+
 const (
-	LineBreakStyleLF   = "lf"
-	LineBreakStyleCRLF = "crlf"
+	LineBreakStyleLF   LineBreakStyle = "lf"
+	LineBreakStyleCRLF LineBreakStyle = "crlf"
 )
+
+type UnsupportedLineBreakError struct {
+	style LineBreakStyle
+}
+
+func (e UnsupportedLineBreakError) Error() string {
+	return fmt.Sprintf("unsupported line break style %s, see package documentation for supported styles", e.style)
+}
+
+func (s LineBreakStyle) Separator() (string, error) {
+	switch s {
+	case LineBreakStyleLF:
+		return "\n", nil
+	case LineBreakStyleCRLF:
+		return "\r\n", nil
+	}
+	return "", UnsupportedLineBreakError{style: s}
+}
+
+type FeatureFunc func([]byte) ([]byte, error)
+
+type Feature struct {
+	Name         string
+	BeforeAction FeatureFunc
+	AfterAction  FeatureFunc
+}
+
+type FeatureList []Feature
+
+type FeatureApplyMode string
+
+var (
+	FeatureApplyBefore FeatureApplyMode = "before"
+	FeatureApplyAfter  FeatureApplyMode = "after"
+)
+
+type FeatureApplyError struct {
+	err         error
+	featureName string
+	mode        FeatureApplyMode
+}
+
+func (e *FeatureApplyError) Error() string {
+	action := "Before"
+	if e.mode == FeatureApplyAfter {
+		action = "After"
+	}
+	return fmt.Sprintf("Feature %s %sAction failed with error: %v", e.featureName, action, e.err)
+}
+
+func (e *FeatureApplyError) Unwrap() error {
+	return e.err
+}
+
+func (fl FeatureList) ApplyFeatures(input []byte, mode FeatureApplyMode) ([]byte, error) {
+	// Declare err here so the result variable doesn't get shadowed in the loop
+	var err error
+	result := make([]byte, len(input))
+	copy(result, input)
+	for _, feature := range fl {
+		if mode == FeatureApplyBefore {
+			if feature.BeforeAction != nil {
+				result, err = feature.BeforeAction(result)
+			}
+		} else {
+			if feature.AfterAction != nil {
+				result, err = feature.AfterAction(result)
+			}
+		}
+
+		if err != nil {
+			return nil, &FeatureApplyError{
+				err:         err,
+				featureName: feature.Name,
+				mode:        mode,
+			}
+		}
+	}
+	return result, nil
+}
