@@ -11,6 +11,4 @@ require (
 	github.com/google/go-cmp v0.5.9 // indirect
 )
 
-replace (
-	gopkg.in/yaml.v3 => github.com/natasha41575/yaml v0.0.0-20210625213737-9866fd3a385f
-)
+replace gopkg.in/yaml.v3 => github.com/longkai/yaml v0.0.0-20221019163627-b871d8a78775

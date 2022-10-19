@@ -30,12 +30,21 @@ func TestParseEmoji(t *testing.T) {
 		{
 			name:        "parses emoji",
 			yamlStr:     "a: 😂\n",
-			expectedStr: "a: \"😂\"\n",
+			expectedStr: "a: 😂\n",
 		},
 		{
 			name:        "parses multiple emoji",
 			yamlStr:     "a: 😼 👑\n",
-			expectedStr: "a: \"😼 👑\"\n",
+			expectedStr: "a: 😼 👑\n",
+		},
+		{
+			name: "literal string",
+			yamlStr: `a: |
+  hello 😄
+`,
+			expectedStr: `a: |
+  hello 😄
+`,
 		},
 	}
 
